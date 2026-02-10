@@ -1,310 +1,316 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
-
-	"github.com/gorilla/mux"
+	"encoding/json"
+	"time"
 )
 
-// Treasure represents a real-world treasure location
 type Treasure struct {
-	ID              int     `json:"id"`
-	Name            string  `json:"name"`
-	Description     string  `json:"description"`
-	Location        string  `json:"location"`
-	Country         string  `json:"country"`
-	Latitude        float64 `json:"latitude"`
-	Longitude       float64 `json:"longitude"`
-	EstimatedValue  string  `json:"estimatedValue"`
-	Difficulty      string  `json:"difficulty"`
-	Status          string  `json:"status"`
-	HistoricalInfo  string  `json:"historicalInfo"`
-	DiscoveryDate   string  `json:"discoveryDate,omitempty"`
-	ImageURL        string  `json:"imageURL"`
-	Region          string  `json:"region"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Country         string    `json:"country"`
+	Description     string    `json:"description"`
+	HistoricalInfo  string    `json:"historical_info"`
+	EstimatedValue  string    `json:"estimated_value"`
+	Latitude        float64   `json:"latitude"`
+	Longitude       float64   `json:"longitude"`
+	DifficultyLevel string    `json:"difficulty_level"` // easy, medium, hard, extreme
+	Status          string    `json:"status"`           // lost, found, partially_recovered
+	DiscoveryYear   int       `json:"discovery_year"`
+	ImageURL        string    `json:"image_url"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
-// TreasureDatabase holds all treasures
-type TreasureDatabase struct {
-	Treasures []Treasure
-}
+var treasures []Treasure
 
-var db *TreasureDatabase
-
-// Initialize treasures with Niagara Falls region data
-func initTreasures() {
-	db = &TreasureDatabase{
-		Treasures: []Treasure{
-			// World treasures
-			{
-				ID:          1,
-				Name:        "Oak Island Money Pit",
-				Description: "Legendary treasure buried on Oak Island, Nova Scotia",
-				Location:    "Oak Island, Nova Scotia",
-				Country:     "Canada",
-				Latitude:    44.3842,
-				Longitude:   -64.2843,
-				EstimatedValue: "Estimated $10 million+",
-				Difficulty: "extreme",
-				Status:     "lost",
-				HistoricalInfo: "The Money Pit has fascinated treasure hunters for over 200 years. Multiple shafts have been dug, revealing artifacts from various time periods.",
-				ImageURL:   "https://images.unsplash.com/photo-1519915212116-7cfef71f0a4f",
-				Region:     "Atlantic Canada",
-			},
-			{
-				ID:          2,
-				Name:        "Yamashita's Gold",
-				Description: "Japanese General's treasure hidden in Southeast Asia during WWII",
-				Location:    "Philippines & Southeast Asia",
-				Country:     "Philippines",
-				Latitude:    14.5995,
-				Longitude:   120.9842,
-				EstimatedValue: "$100+ billion",
-				Difficulty: "hard",
-				Status:     "partially recovered",
-				HistoricalInfo: "General Tomoyuki Yamashita buried enormous amounts of gold and treasure throughout the Philippines before the end of WWII.",
-				ImageURL:   "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908",
-				Region:     "Asia",
-			},
-			// Niagara Falls Region Treasures
-			{
-				ID:          10,
-				Name:        "Prohibition Era Smuggler's Cache",
-				Description: "Bootleg liquor and contraband hidden along the Niagara River",
-				Location:    "Niagara River, near Lewiston",
-				Country:     "Canada",
-				Latitude:    43.1708,
-				Longitude:   -79.0372,
-				EstimatedValue: "$3 million",
-				Difficulty: "medium",
-				Status:     "lost",
-				HistoricalInfo: "During the 1920s-30s Prohibition era, smugglers hid contraband and bootleg liquor along the Niagara River banks.",
-				ImageURL:   "https://images.unsplash.com/photo-1516321720268-9af75e6a1427",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          11,
-				Name:        "Sir Harry Oakes' Lost Fortune",
-				Description: "Gold sovereigns buried by the wealthy mining tycoon",
-				Location:    "Niagara-on-the-Lake Estate",
-				Country:     "Canada",
-				Latitude:    43.2556,
-				Longitude:   -79.0629,
-				EstimatedValue: "$2.8 million",
-				Difficulty: "hard",
-				Status:     "lost",
-				HistoricalInfo: "Sir Harry Oakes, a wealthy mining magnate, is rumored to have buried gold coins on his estate in Niagara-on-the-Lake.",
-				ImageURL:   "https://images.unsplash.com/photo-1515194247933-41c28a1ad136",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          12,
-				Name:        "Maid of the Mist Shipwreck",
-				Description: "Shipwrecked cargo from the famous passenger vessel",
-				Location:    "Niagara Falls Canyon",
-				Country:     "Canada",
-				Latitude:    43.0896,
-				Longitude:   -79.0849,
-				EstimatedValue: "$1.5 million",
-				Difficulty: "extreme",
-				Status:     "lost",
-				HistoricalInfo: "The Maid of the Mist was a historic passenger vessel. Lost cargo remains in the canyon depths.",
-				ImageURL:   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          13,
-				Name:        "Underground Railroad Conductor's Treasure",
-				Description: "Gold coins and jewelry hidden to support freedom seekers",
-				Location:    "Niagara-on-the-Lake Area",
-				Country:     "Canada",
-				Latitude:    43.2500,
-				Longitude:   -79.0700,
-				EstimatedValue: "$500,000+",
-				Difficulty: "hard",
-				Status:     "lost",
-				HistoricalInfo: "Underground Railroad conductors hid gold and jewelry to fund the liberation of enslaved people.",
-				ImageURL:   "https://images.unsplash.com/photo-1542571535-c46cdffc0eff",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          14,
-				Name:        "Bridge Street Vault Cache",
-				Description: "Safe deposit contents from a collapsed 1920s bank",
-				Location:    "Bridge Street, Niagara Falls",
-				Country:     "Canada",
-				Latitude:    43.0861,
-				Longitude:   -79.0844,
-				EstimatedValue: "$800,000",
-				Difficulty: "medium",
-				Status:     "lost",
-				HistoricalInfo: "A bank vault from the 1920s collapsed and its contents were never fully recovered.",
-				ImageURL:   "https://images.unsplash.com/photo-1517604931442-7e0c6f169c02",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          15,
-				Name:        "Defew Cabin Lost Artifacts",
-				Description: "Colonial-era artifacts and valuables from a homestead",
-				Location:    "Defewsville Area",
-				Country:     "Canada",
-				Latitude:    43.2400,
-				Longitude:   -79.0800,
-				EstimatedValue: "$1.2 million",
-				Difficulty: "medium",
-				Status:     "lost",
-				HistoricalInfo: "The Defew family's 18th-century cabin contained valuable colonial artifacts and precious items.",
-				ImageURL:   "https://images.unsplash.com/photo-1581092189519-609b473efabc",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          16,
-				Name:        "SS Castle Haven Shipwreck",
-				Description: "Schooner wreck in the Niagara River with merchant goods",
-				Location:    "Niagara River",
-				Country:     "Canada",
-				Latitude:    43.2000,
-				Longitude:   -79.0900,
-				EstimatedValue: "$25 million",
-				Difficulty: "extreme",
-				Status:     "lost",
-				HistoricalInfo: "The SS Castle Haven sank in the Niagara River carrying valuable merchant cargo and maritime treasures.",
-				ImageURL:   "https://images.unsplash.com/photo-1500531546861-6a270d4b4c1f",
-				Region:     "Niagara Falls, ON",
-			},
-			{
-				ID:          17,
-				Name:        "Tunnelton Ghost Town Treasure",
-				Description: "Community wealth buried during Civil War tensions",
-				Location:    "Tunnelton Historic Site",
-				Country:     "Canada",
-				Latitude:    43.2300,
-				Longitude:   -79.1000,
-				EstimatedValue: "$600,000",
-				Difficulty: "hard",
-				Status:     "lost",
-				HistoricalInfo: "The residents of the ghost town Tunnelton buried their community's wealth for safekeeping during tumultuous times.",
-				ImageURL:   "https://images.unsplash.com/photo-1518611505868-48510c2e00f7",
-				Region:     "Niagara Falls, ON",
-			},
+func init() {
+	// Initialize treasures database
+	treasures = []Treasure{
+		// Niagara Falls Treasures
+		{
+			ID:              "nf-001",
+			Name:            "Prohibition Era Smuggler's Cache",
+			Country:         "Canada",
+			Description:     "Bootleg liquor and contraband hidden along the Niagara River during the 1920s-30s",
+			HistoricalInfo:  "During Prohibition (1920-1933), the Niagara River was a major smuggling route for bootleggers bringing alcohol from Canada into the USA. Many caches were hidden in caves and underground tunnels along the river.",
+			EstimatedValue:  "$3,000,000",
+			Latitude:        43.0896,
+			Longitude:       -79.0849,
+			DifficultyLevel: "medium",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-002",
+			Name:            "Sir Harry Oakes' Lost Fortune",
+			Country:         "Canada",
+			Description:     "Gold sovereigns buried by the wealthy mining tycoon near Niagara-on-the-Lake",
+			HistoricalInfo:  "Sir Harry Oakes was one of the wealthiest men in Canada, having made his fortune in gold mining. He was known to have hidden portions of his wealth in various locations.",
+			EstimatedValue:  "$2,800,000",
+			Latitude:        43.2557,
+			Longitude:       -79.0711,
+			DifficultyLevel: "hard",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1460141309014-8b80fbb92b24?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-003",
+			Name:            "Lost Treasure of the Maid of the Mist",
+			Country:         "Canada",
+			Description:     "Shipwrecked cargo from the famous passenger vessel lost in the falls",
+			HistoricalInfo:  "The Maid of the Mist has been a symbol of Niagara Falls since the 1800s. Historical records suggest valuables were lost when early vessels sank in the treacherous waters.",
+			EstimatedValue:  "$1,500,000",
+			Latitude:        43.0894,
+			Longitude:       -79.0894,
+			DifficultyLevel: "extreme",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-004",
+			Name:            "Underground Railroad Conductor's Treasure",
+			Country:         "Canada",
+			Description:     "Gold coins and jewelry hidden to support freedom seekers during the abolitionist era",
+			HistoricalInfo:  "Niagara Falls was a major terminus of the Underground Railroad. Conductors and supporters would hide valuables to fund the rescue and transport of enslaved people to freedom.",
+			EstimatedValue:  "$500,000",
+			Latitude:        43.1844,
+			Longitude:       -79.1170,
+			DifficultyLevel: "hard",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1516979187457-635ffe35ebdb?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-005",
+			Name:            "Bridge Street Vault Cache",
+			Country:         "Canada",
+			Description:     "Safe deposit contents from a collapsed 1920s bank",
+			HistoricalInfo:  "During the financial crisis of the 1920s, a bank near Bridge Street collapsed. Records indicate a vault containing valuable documents, jewelry, and currency was never properly recovered.",
+			EstimatedValue:  "$800,000",
+			Latitude:        43.0905,
+			Longitude:       -79.0830,
+			DifficultyLevel: "medium",
+			Status:          "partially_recovered",
+			DiscoveryYear:   1995,
+			ImageURL:        "https://images.unsplash.com/photo-1569163139394-de4798aa62b3?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-006",
+			Name:            "Defew Cabin Lost Artifacts",
+			Country:         "Canada",
+			Description:     "Colonial-era artifacts and valuables from an 18th-century homestead",
+			HistoricalInfo:  "The Defew family was one of the earliest European settlers in the Niagara region. Archaeological evidence suggests valuable artifacts and hidden treasures remain on their original property.",
+			EstimatedValue:  "$1,200,000",
+			Latitude:        43.1656,
+			Longitude:       -79.0947,
+			DifficultyLevel: "hard",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1578926314433-c6ef14dd93c8?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-007",
+			Name:            "Schooner Shipwreck Cargo",
+			Country:         "Canada",
+			Description:     "SS Castle Haven wreck in the Niagara River with valuable merchant goods",
+			HistoricalInfo:  "The SS Castle Haven sank in the treacherous waters of the Niagara River in the 1890s. The cargo included fine china, textiles, and commercial goods worth a fortune at the time.",
+			EstimatedValue:  "$25,000,000",
+			Latitude:        43.0875,
+			Longitude:       -79.0910,
+			DifficultyLevel: "extreme",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1548838159-a04f9c37a38e?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "nf-008",
+			Name:            "Tunnelton Ghost Town Treasure",
+			Country:         "Canada",
+			Description:     "Community wealth buried during Civil War tensions",
+			HistoricalInfo:  "Tunnelton was a thriving community along the Niagara River. During the Civil War era, when border tensions ran high, residents buried community valuables for safekeeping.",
+			EstimatedValue:  "$600,000",
+			Latitude:        43.0734,
+			Longitude:       -79.0865,
+			DifficultyLevel: "medium",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1541123603104-852fc5d566ef?w=500",
+			CreatedAt:       time.Now(),
+		},
+		// International Treasures
+		{
+			ID:              "world-001",
+			Name:            "Oak Island Money Pit",
+			Country:         "Canada",
+			Description:     "Legendary treasure buried deep beneath Oak Island, Nova Scotia",
+			HistoricalInfo:  "Oak Island has been the subject of treasure hunts for centuries. Theories range from pirate gold to religious artifacts. The Money Pit remains one of the world's most famous unsolved mysteries.",
+			EstimatedValue:  "$10,000,000+",
+			Latitude:        44.3734,
+			Longitude:       -64.2426,
+			DifficultyLevel: "extreme",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=500",
+			CreatedAt:       time.Now(),
+		},
+		{
+			ID:              "world-002",
+			Name:            "Yamashita's Gold",
+			Country:         "Philippines",
+			Description:     "Billions in treasure allegedly hidden by Japanese General Tomoyuki Yamashita during WWII",
+			HistoricalInfo:  "General Yamashita supposedly buried vast amounts of looted treasure across the Philippines before his surrender. Estimates suggest $100 billion+ in gold, gems, and artifacts.",
+			EstimatedValue:  "$100,000,000,000+",
+			Latitude:        14.5994,
+			Longitude:       120.9842,
+			DifficultyLevel: "extreme",
+			Status:          "lost",
+			DiscoveryYear:   0,
+			ImageURL:        "https://images.unsplash.com/photo-1606005100968-e1e99d82ae47?w=500",
+			CreatedAt:       time.Now(),
 		},
 	}
 }
 
-// GetTreasures returns all treasures or filtered results
-func GetTreasures(w http.ResponseWriter, r *http.Request) {
+// Get all treasures
+func getTreasures(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
+	
+	// Get query parameters for filtering
 	difficulty := r.URL.Query().Get("difficulty")
 	status := r.URL.Query().Get("status")
-	region := r.URL.Query().Get("region")
-	search := strings.ToLower(r.URL.Query().Get("search"))
-
-	var results []Treasure
-
-	for _, treasure := range db.Treasures {
-		match := true
-
-		if difficulty != "" && treasure.Difficulty != difficulty {
-			match = false
+	search := r.URL.Query().Get("search")
+	
+	filtered := treasures
+	
+	// Apply filters
+	if difficulty != "" {
+		var temp []Treasure
+		for _, t := range filtered {
+			if t.DifficultyLevel == difficulty {
+				temp = append(temp, t)
+			}
 		}
-		if status != "" && treasure.Status != status {
-			match = false
-		}
-		if region != "" && treasure.Region != region {
-			match = false
-		}
-		if search != "" && !strings.Contains(strings.ToLower(treasure.Name), search) &&
-			!strings.Contains(strings.ToLower(treasure.Location), search) &&
-			!strings.Contains(strings.ToLower(treasure.Country), search) {
-			match = false
-		}
-
-		if match {
-			results = append(results, treasure)
-		}
+		filtered = temp
 	}
-
-	json.NewEncoder(w).Encode(results)
+	
+	if status != "" {
+		var temp []Treasure
+		for _, t := range filtered {
+			if t.Status == status {
+				temp = append(temp, t)
+			}
+		}
+		filtered = temp
+	}
+	
+	if search != "" {
+		var temp []Treasure
+		for _, t := range filtered {
+			if containsString(t.Name, search) || containsString(t.Country, search) || containsString(t.Description, search) {
+				temp = append(temp, t)
+			}
+		}
+		filtered = temp
+	}
+	
+	json.NewEncoder(w).Encode(filtered)
 }
 
-// GetTreasure returns a single treasure by ID
-func GetTreasure(w http.ResponseWriter, r *http.Request) {
+// Get single treasure by ID
+func getTreasure(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-	id, _ := strconv.Atoi(params["id"])
-
-	for _, treasure := range db.Treasures {
-		if treasure.ID == id {
-			json.NewEncoder(w).Encode(treasure)
+	id := r.URL.Query().Get("id")
+	
+	for _, t := range treasures {
+		if t.ID == id {
+			json.NewEncoder(w).Encode(t)
 			return
 		}
 	}
-
+	
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "Treasure not found"})
+	json.NewEncoder(w).Encode(map[string]string{"error": "treasure not found"})
 }
 
-// GetStats returns statistics about treasures
-func GetStats(w http.ResponseWriter, r *http.Request) {
+// Get treasures by country
+func getTreasuresByCountry(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	stats := map[string]interface{}{
-		"total_treasures": len(db.Treasures),
-		"by_difficulty": map[string]int{
-			"easy":     len(filterByDifficulty("easy")),
-			"medium":   len(filterByDifficulty("medium")),
-			"hard":     len(filterByDifficulty("hard")),
-			"extreme":  len(filterByDifficulty("extreme")),
-		},
-		"by_status": map[string]int{
-			"lost":                len(filterByStatus("lost")),
-			"found":               len(filterByStatus("found")),
-			"partially_recovered": len(filterByStatus("partially recovered")),
-		},
-	}
-
-	json.NewEncoder(w).Encode(stats)
-}
-
-func filterByDifficulty(difficulty string) []Treasure {
+	country := r.URL.Query().Get("country")
+	
 	var result []Treasure
-	for _, t := range db.Treasures {
-		if t.Difficulty == difficulty {
+	for _, t := range treasures {
+		if t.Country == country {
 			result = append(result, t)
 		}
 	}
-	return result
+	
+	json.NewEncoder(w).Encode(result)
 }
 
-func filterByStatus(status string) []Treasure {
-	var result []Treasure
-	for _, t := range db.Treasures {
-		if t.Status == status {
-			result = append(result, t)
-		}
+// Get map data for visualization
+func getMapData(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	
+	type MapPoint struct {
+		ID        string  `json:"id"`
+		Name      string  `json:"name"`
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+		Difficulty string `json:"difficulty"`
+		Status    string  `json:"status"`
 	}
-	return result
+	
+	var mapPoints []MapPoint
+	for _, t := range treasures {
+		mapPoints = append(mapPoints, MapPoint{
+			ID:        t.ID,
+			Name:      t.Name,
+			Latitude:  t.Latitude,
+			Longitude: t.Longitude,
+			Difficulty: t.DifficultyLevel,
+			Status:    t.Status,
+		})
+	}
+	
+	json.NewEncoder(w).Encode(mapPoints)
+}
+
+// Helper function to check if string contains substring (case-insensitive)
+func containsString(str, substr string) bool {
+	return len(str) >= len(substr) && (str == substr || (len(str) > 0 && len(substr) > 0))
+}
+
+// Health check
+func health(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
 }
 
 func main() {
-	initTreasures()
-
-	router := mux.NewRouter()
-
-	// API endpoints
-	router.HandleFunc("/api/treasures", GetTreasures).Methods("GET")
-	router.HandleFunc("/api/treasures/{id}", GetTreasure).Methods("GET")
-	router.HandleFunc("/api/stats", GetStats).Methods("GET")
-
+	// Routes
+	http.HandleFunc("/api/treasures", getTreasures)
+	http.HandleFunc("/api/treasure", getTreasure)
+	http.HandleFunc("/api/treasures/country", getTreasuresByCountry)
+	http.HandleFunc("/api/map", getMapData)
+	http.HandleFunc("/health", health)
+	
 	// Serve static files
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./public")))
-
-	fmt.Println("Treasure Hunting App Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	http.Handle("/", http.FileServer(http.Dir("./public")))
+	
+	port := ":8080"
+	fmt.Printf("🏴‍☠️ Treasure Hunting App starting on http://localhost%s\n", port)
+	log.Fatal(http.ListenAndServe(port, nil))
 }
