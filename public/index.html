@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunting App</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Treasure Hunting Application</h1>
+        <nav>
+            <ul>
+                <li><button id="mapViewBtn">Map View</button></li>
+                <li><button id="gridViewBtn">Grid View</button></li>
+            </ul>
+        </nav>
+        <input type="text" id="search" placeholder="Search treasures..."><br>
+        <div id="filters">
+            <label for="filter">Filter: </label>
+            <select id="filter">
+                <option value="all">All</option>
+                <option value="gold">Gold</option>
+                <option value="silver">Silver</option>
+                <option value="artifacts">Artifacts</option>
+            </select>
+        </div>
+    </header>
+    <main>
+        <div id="mapView" class="view">
+            <h2>Map View</h2>
+            <div id="map"></div>
+        </div>
+        <div id="gridView" class="view" style="display:none;">
+            <h2>Grid View</h2>
+            <div id="treasureGrid"></div>
+        </div>
+    </main>
+    <div id="treasureModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Treasure Details</h2>
+            <p id="treasureDetails"></p>
+        </div>
+    </div>
+</body>
+</html>
